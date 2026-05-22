@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Ambulance, Users, Activity, Shield, Clock, Calendar, Bot, TrendingUp, Award, LayoutDashboard } from "lucide-react";
 import logoSecretaria from "@/assets/logo-secretaria-saude-marilia.png";
 import logoApp from "@/assets/logo.png"; 
-import Footer from "@/components/Footer"; // Ajuste o caminho se a sua pasta for minúscula (ex: "@/components/footer")
+import Footer from "@/components/Footer";
 
 const HomePage = () => {
   return (
@@ -42,7 +42,7 @@ const HomePage = () => {
               </div>
 
               <div className="flex items-center space-x-3">
-                <Link to="/gestor">
+                <Link to="/login-gestor">
                   <Button variant="outline" className="rounded-xl px-5 py-3 text-sm font-medium">
                     <LayoutDashboard className="w-4 h-4 mr-2" />
                     Portal do Gestor
@@ -91,7 +91,7 @@ const HomePage = () => {
                       Agendar Ambulância
                     </Button>
                   </Link>
-                  <Link to="/gestor">
+                  <Link to="/login-gestor">
                     <Button size="lg" variant="outline" className="rounded-xl px-8 py-4 text-base font-medium w-full sm:w-auto">
                       <LayoutDashboard className="w-5 h-5 mr-2" />
                       Acessar Gestão

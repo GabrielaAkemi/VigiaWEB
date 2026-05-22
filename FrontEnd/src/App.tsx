@@ -10,6 +10,7 @@ import NotFound from "./pages/NotFound";
 import LoginCli from "./pages/LoginCli";
 import CadastroClientes from "./pages/CadastroClientes";
 import TermosDeUso from "./pages/TermosDeUso";
+import LoginGestor from "./pages/LoginGestor";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/portal" element={<PortalCidadao />} />
+          <Route path="/login-gestor" element={<LoginGestor />} />
           <Route path="/gestor" element={<PortalGestor />} />
           <Route path="/clientes/loginClientes" element={<LoginCli />} />
           <Route path="/clientes/cadastroClientes" element={<CadastroClientes />} />
