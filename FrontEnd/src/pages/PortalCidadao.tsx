@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Ambulance, LogOut, Calendar, User, Clock, MapPin, Check, HeartPulse, Accessibility } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Ambulance, LogOut, Calendar, User, Clock, MapPin, Check, HeartPulse, Accessibility, Repeat, CalendarRange } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import logoApp from "@/assets/logo.png";
@@ -50,6 +51,11 @@ const PortalCidadao = () => {
   const [destino, setDestino] = useState("");
   const [tipoConsulta, setTipoConsulta] = useState("");
   const [observacoes, setObservacoes] = useState("");
+  const [recorrente, setRecorrente] = useState(false);
+  const [diasSemana, setDiasSemana] = useState<string[]>([]);
+  const [frequenciaSemanal, setFrequenciaSemanal] = useState("3");
+  const [duracaoMeses, setDuracaoMeses] = useState("5");
+  const [horarioFixo, setHorarioFixo] = useState("");
   const [slotsByDay] = useState<Record<string, Slot[]>>(() => {
     const map: Record<string, Slot[]> = {};
     days.forEach(d => (map[d.key] = generateSlotsForDate(d.key)));
@@ -97,12 +103,26 @@ const PortalCidadao = () => {
   const handleLogout = () => navigate("/");
 
   const confirmarAgendamento = () => {
+    if (recorrente) {
+      if (!destino || !tipoConsulta || !horarioFixo || diasSemana.length === 0) {
+        toast.error("Preencha destino, tipo, horário fixo e selecione os dias da semana");
+        return;
+      }
+      toast.success(
+        `Agendamento recorrente solicitado! ${diasSemana.join(", ")} às ${horarioFixo}, por ${duracaoMeses} meses.`
+      );
+      return;
+    }
     if (!selectedSlot || !destino || !tipoConsulta) {
       toast.error("Preencha destino, tipo e selecione um horário");
       return;
     }
     toast.success("Agendamento solicitado! Você receberá confirmação no seu telefone.");
     setSelectedSlot(null);
+  };
+
+  const toggleDia = (dia: string) => {
+    setDiasSemana(prev => prev.includes(dia) ? prev.filter(d => d !== dia) : [...prev, dia]);
   };
 
   const slots = slotsByDay[selectedDay] ?? [];
@@ -164,59 +184,161 @@ const PortalCidadao = () => {
 
             <div className="grid lg:grid-cols-3 gap-6">
               <Card className="lg:col-span-2 shadow-xl border border-border/50 bg-card/95 backdrop-blur-xl rounded-2xl">
-                <CardHeader>
+                <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
                   <CardTitle className="flex items-center gap-2 font-poppins">
-                    <Calendar className="w-5 h-5 text-primary" /> Horários disponíveis
+                    <Calendar className="w-5 h-5 text-primary" />
+                    {recorrente ? "Agendamento recorrente" : "Horários disponíveis"}
                   </CardTitle>
+                  {temPrioridade && (
+                    <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl border-2 border-primary/30 bg-primary/5">
+                      <Repeat className="w-4 h-4 text-primary" />
+                      <span className="text-xs font-semibold text-foreground">Horário fixo recorrente</span>
+                      <Switch checked={recorrente} onCheckedChange={setRecorrente} />
+                    </label>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex gap-2 overflow-x-auto pb-2">
-                    {days.map(d => (
-                      <button
-                        key={d.key}
-                        onClick={() => { setSelectedDay(d.key); setSelectedSlot(null); }}
-                        className={`flex-shrink-0 px-4 py-3 rounded-xl border-2 transition-all min-w-[88px] ${
-                          selectedDay === d.key
-                            ? "border-primary bg-primary text-primary-foreground shadow-lg"
-                            : "border-border/50 bg-background/50 hover:border-primary/40"
-                        }`}
-                      >
-                        <div className="text-xs font-semibold uppercase">{d.label}</div>
-                        <div className="text-lg font-bold font-poppins">{d.date}</div>
-                      </button>
-                    ))}
-                  </div>
+                  {!recorrente && (
+                    <>
+                      <div className="flex gap-2 overflow-x-auto pb-2">
+                        {days.map(d => (
+                          <button
+                            key={d.key}
+                            onClick={() => { setSelectedDay(d.key); setSelectedSlot(null); }}
+                            className={`flex-shrink-0 px-4 py-3 rounded-xl border-2 transition-all min-w-[88px] ${
+                              selectedDay === d.key
+                                ? "border-primary bg-primary text-primary-foreground shadow-lg"
+                                : "border-border/50 bg-background/50 hover:border-primary/40"
+                            }`}
+                          >
+                            <div className="text-xs font-semibold uppercase">{d.label}</div>
+                            <div className="text-lg font-bold font-poppins">{d.date}</div>
+                          </button>
+                        ))}
+                      </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {slots.map(slot => {
-                      const isSelected = selectedSlot === slot.id;
-                      return (
-                        <button
-                          key={slot.id}
-                          disabled={!slot.available}
-                          onClick={() => setSelectedSlot(slot.id)}
-                          className={`p-4 rounded-xl border-2 transition-all text-left ${
-                            !slot.available
-                              ? "border-border/30 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-60"
-                              : isSelected
-                                ? "border-primary bg-primary/10 shadow-lg scale-[1.02]"
-                                : "border-border/50 bg-background hover:border-primary/40 hover:shadow-md"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="text-lg font-bold text-foreground font-poppins flex items-center gap-1">
-                              <Clock className="w-4 h-4" /> {slot.time}
-                            </span>
-                            {isSelected && <Check className="w-5 h-5 text-primary" />}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                        {slots.map(slot => {
+                          const isSelected = selectedSlot === slot.id;
+                          return (
+                            <button
+                              key={slot.id}
+                              disabled={!slot.available}
+                              onClick={() => setSelectedSlot(slot.id)}
+                              className={`p-4 rounded-xl border-2 transition-all text-left ${
+                                !slot.available
+                                  ? "border-border/30 bg-muted/30 text-muted-foreground cursor-not-allowed opacity-60"
+                                  : isSelected
+                                    ? "border-primary bg-primary/10 shadow-lg scale-[1.02]"
+                                    : "border-border/50 bg-background hover:border-primary/40 hover:shadow-md"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-lg font-bold text-foreground font-poppins flex items-center gap-1">
+                                  <Clock className="w-4 h-4" /> {slot.time}
+                                </span>
+                                {isSelected && <Check className="w-5 h-5 text-primary" />}
+                              </div>
+                              <div className="text-xs text-muted-foreground">{slot.tipo}</div>
+                              {!slot.available && <div className="text-xs text-destructive mt-1">Indisponível</div>}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </>
+                  )}
+
+                  {recorrente && (
+                    <div className="space-y-6">
+                      <div className="p-4 rounded-xl bg-primary/5 border-2 border-primary/20 flex items-start gap-3">
+                        <CalendarRange className="w-5 h-5 text-primary mt-0.5" />
+                        <p className="text-sm text-foreground">
+                          Para tratamentos contínuos (hemodiálise, quimioterapia, radioterapia), solicite um <strong>horário fixo</strong> recorrente — mesmo horário, mesmo destino, nos dias escolhidos da semana.
+                        </p>
+                      </div>
+
+                      <div className="grid sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Horário fixo *</Label>
+                          <Input
+                            type="time"
+                            value={horarioFixo}
+                            onChange={e => setHorarioFixo(e.target.value)}
+                            className="h-11 rounded-xl border-2 border-border/50 bg-background/50"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Frequência semanal</Label>
+                          <Select value={frequenciaSemanal} onValueChange={setFrequenciaSemanal}>
+                            <SelectTrigger className="h-11 rounded-xl border-2 border-border/50 bg-background/50">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">1x por semana</SelectItem>
+                              <SelectItem value="2">2x por semana</SelectItem>
+                              <SelectItem value="3">3x por semana</SelectItem>
+                              <SelectItem value="4">4x por semana</SelectItem>
+                              <SelectItem value="5">5x por semana</SelectItem>
+                              <SelectItem value="6">6x por semana</SelectItem>
+                              <SelectItem value="7">Diariamente</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Dias da semana *</Label>
+                        <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+                          {["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"].map(dia => {
+                            const ativo = diasSemana.includes(dia);
+                            return (
+                              <button
+                                key={dia}
+                                type="button"
+                                onClick={() => toggleDia(dia)}
+                                className={`p-3 rounded-xl border-2 font-bold text-sm transition-all ${
+                                  ativo
+                                    ? "border-primary bg-primary text-primary-foreground shadow-lg"
+                                    : "border-border/50 bg-background/50 hover:border-primary/40"
+                                }`}
+                              >
+                                {dia}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 max-w-xs">
+                        <Label>Duração do tratamento (meses)</Label>
+                        <Select value={duracaoMeses} onValueChange={setDuracaoMeses}>
+                          <SelectTrigger className="h-11 rounded-xl border-2 border-border/50 bg-background/50">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 9, 12].map(m => (
+                              <SelectItem key={m} value={String(m)}>{m} {m === 1 ? "mês" : "meses"}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {diasSemana.length > 0 && horarioFixo && (
+                        <div className="p-4 rounded-xl bg-secondary/10 border-2 border-secondary/30">
+                          <div className="text-xs text-muted-foreground mb-1">Resumo da recorrência</div>
+                          <div className="font-bold text-foreground font-poppins">
+                            {diasSemana.length}x por semana — {diasSemana.join(", ")} às {horarioFixo}
                           </div>
-                          <div className="text-xs text-muted-foreground">{slot.tipo}</div>
-                          {!slot.available && <div className="text-xs text-destructive mt-1">Indisponível</div>}
-                        </button>
-                      );
-                    })}
-                  </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            Por {duracaoMeses} {duracaoMeses === "1" ? "mês" : "meses"} consecutivos
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
+
 
               <Card className="shadow-xl border border-border/50 bg-card/95 backdrop-blur-xl rounded-2xl h-fit lg:sticky lg:top-24">
                 <CardHeader>
@@ -269,11 +391,18 @@ const PortalCidadao = () => {
                   </div>
 
                   <div className="p-3 rounded-xl bg-muted/40 border border-border/50 text-sm">
-                    <div className="text-muted-foreground text-xs mb-1">Horário selecionado</div>
+                    <div className="text-muted-foreground text-xs mb-1">
+                      {recorrente ? "Recorrência" : "Horário selecionado"}
+                    </div>
                     <div className="font-bold text-foreground font-poppins">
-                      {selectedSlot ? selectedSlot.split("-").slice(-1)[0] + " — " + (days.find(d => d.key === selectedDay)?.date ?? "") : "Nenhum"}
+                      {recorrente
+                        ? (diasSemana.length && horarioFixo
+                            ? `${diasSemana.join("/")} • ${horarioFixo} • ${duracaoMeses}m`
+                            : "Defina dias e horário")
+                        : (selectedSlot ? selectedSlot.split("-").slice(-1)[0] + " — " + (days.find(d => d.key === selectedDay)?.date ?? "") : "Nenhum")}
                     </div>
                   </div>
+
 
                   <Button
                     onClick={confirmarAgendamento}
