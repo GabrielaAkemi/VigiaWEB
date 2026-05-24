@@ -179,6 +179,51 @@ public class AuthService(AppDbContext context) : IAuthService
         }
     }
 
+
+    public async Task<ServiceResult<AuthResponseDTO>> LoginGestorAsync(LoginRequestDTO dto)
+{
+    try
+    {
+        // 1. Vai no banco de dados e busca na tabela de Atendentes
+        var gestor = await context.Atendentes.FirstOrDefaultAsync(a => a.Email == dto.Email);
+
+        if (gestor == null)
+        {
+            return ServiceResult<AuthResponseDTO>.NaoAutorizado("Email ou senha incorretos");
+        }
+
+        // 2. Valida a senha (usando a mesma criptografia do Cidadão)
+        if (!BC.Verify(dto.Senha, gestor.SenhaHash))
+        {
+            return ServiceResult<AuthResponseDTO>.NaoAutorizado("Email ou senha incorretos");
+        }
+
+        // 3. Gera a resposta de sucesso
+        var token = $"fake-jwt-gestor-token-{gestor.Id}"; // Token temporário
+
+        var response = new AuthResponseDTO
+        {
+            AccessToken = token,
+            TokenType = "Bearer",
+            ExpiresIn = 3600,
+            // Reutilizando o DTO de cliente para facilitar, mas marcando como Gestor
+            Cliente = new ClienteResumoDTO 
+            {
+                Id = gestor.Id,
+                NomeCompleto = gestor.Nome,
+                Email = gestor.Email,
+                Prioridade = "GESTOR" 
+            }
+        };
+
+        return ServiceResult<AuthResponseDTO>.Ok(response);
+    }
+    catch (Exception ex)
+    {
+        return ServiceResult<AuthResponseDTO>.Falha($"Erro ao fazer login do gestor: {ex.Message}", 500);
+    }
+}
+
     /// <summary>
     /// Determina o nível de prioridade com base nos dados clínicos
     /// </summary>
@@ -207,5 +252,45 @@ public class AuthService(AppDbContext context) : IAuthService
             return NivelPrioridade.Prioritario;
 
         return NivelPrioridade.Normal;
+    }
+
+    public async Task<ServiceResult<AuthResponseDTO>> RegisterGestorAsync(RegisterGestorDTO dto)
+    {
+        try
+        {
+            var atendenteExistente = await context.Atendentes.FirstOrDefaultAsync(a => a.Email == dto.Email);
+            if (atendenteExistente != null)
+                return ServiceResult<AuthResponseDTO>.Falha("Email já registrado para outro gestor", 400);
+
+            var novoGestor = new Atendente
+            {
+                Nome = dto.Nome,
+                Email = dto.Email,
+                SenhaHash = BC.HashPassword(dto.Senha)
+            };
+
+            context.Atendentes.Add(novoGestor);
+            await context.SaveChangesAsync();
+
+            // Retorna um resumo só para confirmar que deu certo
+            var response = new AuthResponseDTO
+            {
+                AccessToken = string.Empty,
+                ExpiresIn = 0,
+                Cliente = new ClienteResumoDTO
+                {
+                    Id = novoGestor.Id,
+                    NomeCompleto = novoGestor.Nome,
+                    Email = novoGestor.Email,
+                    Prioridade = "GESTOR"
+                }
+            };
+
+            return ServiceResult<AuthResponseDTO>.Criado(response);
+        }
+        catch (Exception ex)
+        {
+            return ServiceResult<AuthResponseDTO>.Falha($"Erro ao registrar gestor: {ex.Message}", 500);
+        }
     }
 }

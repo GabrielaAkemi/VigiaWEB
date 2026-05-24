@@ -31,6 +31,10 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 
+builder.Services.AddScoped<IAgendamentoService, AgendamentoService>();
+
+builder.Services.AddScoped<IAmbulanciaService, AmbulanciaService>();
+
 var app = builder.Build();
 
 app.UseSwagger();
