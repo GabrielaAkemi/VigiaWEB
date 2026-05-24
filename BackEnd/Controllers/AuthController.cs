@@ -30,4 +30,29 @@ public class AuthController(IAuthService authService) : ControllerBase
 
         return Ok(resultado.Dados);
     }
+
+
+    [HttpPost("login-gestor")]
+    public async Task<ActionResult<AuthResponseDTO>> LoginGestor([FromBody] LoginRequestDTO request)
+    {
+        var result = await authService.LoginGestorAsync(request);
+
+        if (!result.Sucesso)
+        {
+            return StatusCode(result.StatusCode, new { mensagem = result.ErroMensagem });
+        }
+
+        return Ok(result.Dados);
+    }
+
+    [HttpPost("register-gestor")]
+    public async Task<IActionResult> RegisterGestor([FromBody] RegisterGestorDTO dto)
+    {
+        var resultado = await authService.RegisterGestorAsync(dto);
+
+        if (!resultado.Sucesso)
+            return StatusCode(resultado.StatusCode, new { erro = resultado.ErroMensagem });
+
+        return StatusCode(201, resultado.Dados);
+    }
 }
